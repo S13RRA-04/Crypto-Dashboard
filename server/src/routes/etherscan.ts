@@ -1,18 +1,15 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import axios from 'axios';
 
 const router = Router();
-const ETHERSCAN_API = process.env.ETHERSCAN_API!;
 
-if (!ETHERSCAN_API) {
-    console.error('❌ Missing ETHERSCAN_API in environment variables');
-    console.log(`[DEBUG] Calling Etherscan with API: ${ETHERSCAN_API}`);
-    console.log(`[DEBUG] Etherscan API Key: ${ETHERSCAN_API}`);
-    console.log(`[DEBUG] Etherscan API URL: https://api.etherscan.io/api`);
-  process.exit(1);}
-
-router.get('/balance/:address', async (req, res) => {
+router.get('/balance/:address', async (req: Request, res: Response) => {
+  const apiKey = process.env.ETHERSCAN_API;
   const { address } = req.params;
+
+  if (!apiKey) {
+    return res.status(500).json({ error: 'Missing ETHERSCAN_API' });
+  }
 
   try {
     const response = await axios.get('https://api.etherscan.io/api', {
@@ -21,13 +18,14 @@ router.get('/balance/:address', async (req, res) => {
         action: 'balance',
         address,
         tag: 'latest',
-        apikey: ETHERSCAN_API
-      }
+        apikey: apiKey,
+      },
     });
 
-    res.json(response.data);
+    return res.json(response.data);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch from Etherscan' });
+    console.error('[Etherscan Error]', (error as Error).message);
+    return res.status(500).json({ error: 'Failed to fetch from Etherscan' });
   }
 });
 
